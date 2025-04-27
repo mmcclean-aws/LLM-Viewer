@@ -2,3 +2,5 @@ output
 tmp
 *.pyc
 .vscode
+venv
+.ipynb_checkpoints

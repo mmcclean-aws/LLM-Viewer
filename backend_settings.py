@@ -12,6 +12,7 @@ avaliable_model_ids_sources = {
     "facebook/opt-6.7b": {"source": "huggingface"},
     "facebook/opt-30b": {"source": "huggingface"},
     "facebook/opt-66b": {"source": "huggingface"},
+    "AFMText-30B": {"source": "AFMText"},
     # "DiT-XL/2": {"source": "DiT"},
     # "DiT-XL/4": {"source": "DiT"},
 }

@@ -32,4 +32,5 @@ hardware_params = {
     # support AVX-512 & FMA (512-bit), they has throughput of 1 cycle
     # https://www.intel.com/content/www/us/en/products/sku/230496/intel-core-i913900k-processor-36m-cache-up-to-5-80-ghz/specifications.html
     "intel_13900k": {"bandwidth": 89.6e9, "FP16": 8 * 5.4e9 * (512 / 16), "onchip_buffer": 36e6},
+    "trainium2": {"bandwidth": 640e9, "FP16": 158e12, "INT8": 316e12, "onchip_buffer": 56e6},
 }

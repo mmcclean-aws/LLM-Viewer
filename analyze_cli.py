@@ -1,3 +1,4 @@
+import json
 from model_analyzer import ModelAnalyzer
 import torch.nn as nn
 import numpy as np
@@ -35,6 +36,9 @@ parser.add_argument(
     default=1,
     help="the number of devices for tensor parallelism to use"
 )
+parser.add_argument(
+    "--csv", action="store_true", help="save results to csv file"
+)
 args = parser.parse_args()
 
 analyzer = ModelAnalyzer(args.model_id, args.hardware, args.config_file,source=args.source)
@@ -47,4 +51,6 @@ results = analyzer.analyze(
     use_flashattention=args.use_flashattention,
     tp_size=args.tp_size
 )
-analyzer.save_csv()
+print(json.dumps(results, indent=4))
+if args.csv:
+    analyzer.save_csv()
