@@ -123,6 +123,7 @@ class ModelAnalyzer:
         a_bit=16,
         kv_bit=None,
         use_flashattention=False,
+        use_sequence_parallelism=False,
         kv_token_ratio=1,
         tp_size: int = 1
     ):
@@ -292,26 +293,40 @@ class ModelAnalyzer:
             )
 
         for name in config.get_norm_layers(model_params):
+            ops = batchsize * hidden_size * 1
+            load_act = batchsize * hidden_size * 1 * a_byte
+            store_act = batchsize * hidden_size * 1 * a_byte
+            if use_sequence_parallelism:
+                ops = ops / tp_size
+                load_act = load_act / tp_size
+                store_act = store_act / tp_size
             # sum sub pow sum div mul add
             self._analyze_to_results(
                 "decode",
                 name,
-                OPs=batchsize * hidden_size * 1 * 7,
+                OPs=ops,
                 load_weight=0,
-                load_act=batchsize * hidden_size * 1 * a_byte,
-                store_act=batchsize * hidden_size * 1 * a_byte,
+                load_act=load_act,
+                store_act=store_act,
                 load_kv_cache=0,
                 store_kv_cache=0,
             )
 
         for name in ["attn_add", "mlp_add"]:
+            ops = batchsize * hidden_size * 1
+            load_act = batchsize * hidden_size * 1 * a_byte
+            store_act = batchsize * hidden_size * 1 * a_byte
+            if use_sequence_parallelism:
+                ops = ops / tp_size
+                load_act = load_act / tp_size
+                store_act = store_act / tp_size
             self._analyze_to_results(
                 "decode",
                 name,
-                OPs=batchsize * hidden_size * 1,
+                OPs=ops,
                 load_weight=0,
-                load_act=batchsize * hidden_size * 1 * a_byte,
-                store_act=batchsize * hidden_size * 1 * a_byte,
+                load_act=load_act,
+                store_act=store_act,
                 load_kv_cache=0,
                 store_kv_cache=0,
             )
@@ -384,24 +399,38 @@ class ModelAnalyzer:
                 store_kv_cache=0,
             )
         for name in config.get_norm_layers(model_params):
+            ops = batchsize * hidden_size * seqlen * 7
+            load_act = batchsize * hidden_size * seqlen * a_byte
+            store_act = batchsize * hidden_size * seqlen * a_byte
+            if use_sequence_parallelism:
+                ops = ops / tp_size
+                load_act = load_act / tp_size
+                store_act = store_act / tp_size 
             self._analyze_to_results(
                 "prefill",
                 name,
-                OPs=batchsize * hidden_size * seqlen * 7,
+                OPs=ops,
                 load_weight=0,
-                load_act=batchsize * hidden_size * seqlen * a_byte,
-                store_act=batchsize * hidden_size * seqlen * a_byte,
+                load_act=load_act,
+                store_act=store_act,
                 load_kv_cache=0,
                 store_kv_cache=0,
             )
         for name in ["attn_add", "mlp_add"]:
+            ops = batchsize * hidden_size * seqlen * 1
+            load_act = batchsize * hidden_size * seqlen * a_byte
+            store_act = batchsize * hidden_size * seqlen * a_byte
+            if use_sequence_parallelism:
+                ops = ops / tp_size
+                load_act = load_act / tp_size
+                store_act = store_act / tp_size
             self._analyze_to_results(
                 "prefill",
                 name,
-                OPs=batchsize * hidden_size * seqlen * 1,
+                OPs=ops,
                 load_weight=0,
-                load_act=batchsize * hidden_size * seqlen * a_byte,
-                store_act=batchsize * hidden_size * seqlen * a_byte,
+                load_act=load_act,
+                store_act=store_act,
                 load_kv_cache=0,
                 store_kv_cache=0,
             )

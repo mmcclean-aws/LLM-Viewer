@@ -84,6 +84,10 @@
         Use FlashAttention
         <input type="checkbox" v-model="use_flashattention">
     </div>
+    <div class="config_div">
+        Use Sequence Parallelism
+        <input type="checkbox" v-model="use_sequence_parallelism">
+    </div>
 
     <!-- <div class="config_div">
         Use Flash Attention
@@ -145,6 +149,7 @@ const w_quant = ref('FP16');
 const a_quant = ref('FP16');
 const kv_quant = ref('FP16');
 const use_flashattention = ref(false);
+const use_sequence_parallelism = ref(false);
 
 watch(inference_stage, (new_stage) => {
     console.log("inference_stage", new_stage)
@@ -191,6 +196,12 @@ watch(kv_quant, (n) => {
 watch(use_flashattention, (n) => {
     console.log("use_flashattention", n)
     global_inference_config.value.use_flashattention = n
+    global_update_trigger.value += 1
+})
+
+watch(use_sequence_parallelism, (n) => {
+    console.log("use_sequence_parallelism", n)
+    global_inference_config.value.use_sequence_parallelism = n
     global_update_trigger.value += 1
 })
 

@@ -32,7 +32,8 @@ const global_inference_config = ref({
   w_quant: "FP16", 
   a_quant: "FP16", 
   kv_quant: "FP16", 
-  use_flashattention: false
+  use_flashattention: false,
+  use_sequence_parallelism: false
 });
 provide("global_inference_config", global_inference_config);
 

@@ -54,6 +54,7 @@ def get_model_graph(model_id, hardware, config_path, inference_config):
     seq_length = int(inference_config["seq_length"])
     batch_size = int(inference_config["batch_size"])
     use_flashattention = bool(inference_config["use_flashattention"])
+    use_sequence_parallelism = bool(inference_config["use_sequence_parallelism"])   
     gen_length = int(inference_config["gen_length"])
     tp_size = int(inference_config["tp_size"])
 
@@ -65,7 +66,8 @@ def get_model_graph(model_id, hardware, config_path, inference_config):
         a_bit=a_bit,
         kv_bit=kv_bit,
         use_flashattention=use_flashattention,
-        tp_size=tp_size
+        tp_size=tp_size,
+        use_sequence_parallelism=use_sequence_parallelism,
     )
     bandwidth, max_OPS, onchip_buffer = analyzer.get_hardware_info()
     GQA = analyzer.get_model_info()["GQA"]
