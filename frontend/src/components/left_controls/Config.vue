@@ -105,6 +105,8 @@
         <div v-for="(value, key) in total_results[inference_stage]" :key="key" class="network-wise-info-item">
             <span v-if="['bound'].includes(key)">{{ key }}: {{ value }}</span>
             <span v-else-if="['inference_time'].includes(key)">{{ key }}: {{ strNumberTime(value) }}</span>
+            <span v-else-if="['compute_time'].includes(key)">{{ key }}: {{ strNumberTime(value) }}</span>
+            <span v-else-if="['collectives_time'].includes(key)">{{ key }}: {{ strNumberTime(value) }}</span>
             <span v-else>{{ key }}: {{ strNumber(value) }}</span>
         </div>
         <p>NOTE: The time estimated by the roofline model represents the theoretical performance that the hardware can achieve. 
@@ -117,6 +119,8 @@
         <div v-for="(value, key) in total_results['prefill']" :key="key" class="network-wise-info-item">
             <span v-if="['bound'].includes(key)">{{ key }}: {{ value }}</span>
             <span v-else-if="['inference_time'].includes(key)">{{ key }}: {{ strNumberTime(value) }}</span>
+            <span v-else-if="['compute_time'].includes(key)">{{ key }}: {{ strNumberTime(value) }}</span>
+            <span v-else-if="['collectives_time'].includes(key)">{{ key }}: {{ strNumberTime(value) }}</span>
             <span v-else>{{ key }}: {{ strNumber(value) }}</span>
         </div>
     </div>
@@ -125,6 +129,8 @@
         <div v-for="(value, key) in total_results['chat']" :key="key" class="network-wise-info-item">
             <span v-if="['bound'].includes(key)">{{ key }}: {{ value }}</span>
             <span v-else-if="['inference_time'].includes(key)">{{ key }}: {{ strNumberTime(value) }}</span>
+            <span v-else-if="['compute_time'].includes(key)">{{ key }}: {{ strNumberTime(value) }}</span>
+            <span v-else-if="['collectives_time'].includes(key)">{{ key }}: {{ strNumberTime(value) }}</span>
             <span v-else>{{ key }}: {{ strNumber(value) }}</span>
         </div>
     </div> -->
