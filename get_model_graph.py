@@ -99,10 +99,7 @@ def get_model_graph(model_id, hardware, config_path, inference_config):
             edge = {"source": input_name, "target": name}
             edges.append(edge)
 
-    if use_flashattention:
-        layer_graph = analyzer.config.flashattention_transformer_layer_graph
-    else:
-        layer_graph = analyzer.config.transformer_layer_graph
+    layer_graph = analyzer.config.build_transformer_layer_graph(tp_size=tp_size, use_sequence_parallelism=use_sequence_parallelism, use_flashattention=use_flashattention)
     stage = inference_config["stage"]
     total_results = result["total_results"]
     if stage != "chat":

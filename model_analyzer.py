@@ -2,6 +2,7 @@ import os
 import importlib
 from hardwares.hardware_params import hardware_params
 from roofline_model import roofline_analyze
+from get_collectives_bandwidth import get_algorithm_bandwidth
 from transformers import AutoTokenizer, AutoConfig, AutoModelForCausalLM
 from utils import str_number, str_number_time
 import math
@@ -65,10 +66,10 @@ class ModelAnalyzer:
         store_kv_cache=0,
     ):
 
-        bandwidth, max_OPS, onchip_buffer = self.get_hardware_info()
+        bandwidth, max_OPS, _ = self.get_hardware_info()
         memory_access = load_weight + load_act + store_act + load_kv_cache + store_kv_cache
         arithmetic_intensity, performance, bound = roofline_analyze(bandwidth, max_OPS, OPs, memory_access)
-        inference_time = OPs / performance
+        inference_time = self._get_time_by_name(name, OPs, performance, load_act)
         self.results[stage][name] = {
             "OPs": OPs,
             "memory_access": memory_access,
@@ -82,6 +83,21 @@ class ModelAnalyzer:
             "store_kv_cache": store_kv_cache,
             "inference_time": inference_time,
         }
+
+    def _get_time_by_name(self, name, OPs, performance, load_act):
+        if "all_reduce" in name or "reduce_scatter" in name or "all_gather" in name:
+            if "all_reduce" in name:
+                algo = "allr"
+            elif "reduce_scatter" in name:
+                algo = "redsct"
+            elif "all_gather" in name:
+                algo = "allg"
+            else:
+                raise ValueError(f"unknown collective operation {name}")
+            algo_bandwidth = get_algorithm_bandwidth(message_size=load_act, algorithm=algo, core_count=self.tp_size, device=self.hardware) * 1e9
+            return load_act / algo_bandwidth
+        else:
+            return OPs / performance
 
     def save_csv(self, save_path=None):
         if save_path is None:
@@ -341,6 +357,42 @@ class ModelAnalyzer:
                 load_kv_cache=0,
                 store_kv_cache=0,
             )
+        for name in config.get_collective_layers(tp_size, use_sequence_parallelism):
+            if 'all_reduce' in name:
+                self._analyze_to_results(
+                    "decode",
+                    name,
+                    OPs=0,
+                    load_weight=0,
+                    load_act= batchsize * hidden_size * 1 * a_byte,
+                    store_act=batchsize * hidden_size * 1 * a_byte,
+                    load_kv_cache=0,
+                    store_kv_cache=0,
+                )
+            elif 'reduce_scatter' in name:
+                self._analyze_to_results(
+                    "decode",
+                    name,
+                    OPs=0,
+                    load_weight=0,
+                    load_act= batchsize * hidden_size * 1 * a_byte,
+                    store_act=batchsize * hidden_size * 1 * a_byte / tp_size,
+                    load_kv_cache=0,
+                    store_kv_cache=0,
+                )
+            elif 'all_gather' in name:
+                self._analyze_to_results(
+                    "decode",
+                    name,
+                    OPs=0,
+                    load_weight=0,
+                    load_act= batchsize * hidden_size * 1 * a_byte / tp_size,
+                    store_act=batchsize * hidden_size * 1 * a_byte,
+                    load_kv_cache=0,
+                    store_kv_cache=0,
+                )
+            else:
+                raise ValueError(f'unknown collective operation {name}')
 
         # for prefill
         qk_matmul_OPs = seqlen * seqlen * head_size * num_attention_heads * batchsize * 2
@@ -445,6 +497,42 @@ class ModelAnalyzer:
                 load_kv_cache=0,
                 store_kv_cache=0,
             )
+        for name in config.get_collective_layers(tp_size, use_sequence_parallelism):
+            if 'all_reduce' in name:
+                self._analyze_to_results(
+                    "prefill",
+                    name,
+                    OPs=0,
+                    load_weight=0,
+                    load_act= batchsize * hidden_size * seqlen * a_byte,
+                    store_act=batchsize * hidden_size * seqlen * a_byte,
+                    load_kv_cache=0,
+                    store_kv_cache=0,
+                )
+            elif 'reduce_scatter' in name:
+                self._analyze_to_results(
+                    "prefill",
+                    name,
+                    OPs=0,
+                    load_weight=0,
+                    load_act= batchsize * hidden_size * seqlen * a_byte,
+                    store_act=batchsize * hidden_size * seqlen * a_byte / tp_size,
+                    load_kv_cache=0,
+                    store_kv_cache=0,
+                )
+            elif 'all_gather' in name:
+                self._analyze_to_results(
+                    "prefill",
+                    name,
+                    OPs=0,
+                    load_weight=0,
+                    load_act= batchsize * hidden_size * seqlen * a_byte / tp_size,
+                    store_act=batchsize * hidden_size * seqlen * a_byte,
+                    load_kv_cache=0,
+                    store_kv_cache=0,
+                )
+            else:
+                raise ValueError(f'unknown collective operation {name}')
 
         # compute total
         total_results = {"decode": {}, "prefill": {}}
@@ -473,6 +561,20 @@ class ModelAnalyzer:
         total_results["prefill"]["memory_consumption_weight"] = total_results["prefill"]["load_weight"]
         total_results["prefill"]["memory_consumption_kv_cache"] = total_results["prefill"]["store_kv_cache"]
 
+        # calculate collectives vs compute times
+        for stage in ["decode", "prefill"]:
+            total_results[stage]["collectives_time"] = 0
+            total_results[stage]["compute_time"] = 0
+            for layer_name, result in self.results[stage].items():
+                if 'all_reduce' in layer_name or 'all_gather' in layer_name or 'reduce_scatter' in layer_name:
+                    total_results[stage]["collectives_time"] += result["inference_time"] * num_hidden_layers
+                else:
+                    total_results[stage]["compute_time"] += result["inference_time"] * num_hidden_layers
+        total_results["decode"]["collectives_time_ratio"] = total_results["decode"]["collectives_time"] / (total_results["decode"]["compute_time"] + total_results["decode"]["collectives_time"])
+        total_results["decode"]["compute_time_ratio"] = total_results["decode"]["compute_time"] / (total_results["decode"]["compute_time"] + total_results["decode"]["collectives_time"])
+        total_results["prefill"]["collectives_time_ratio"] = total_results["prefill"]["collectives_time"] / (total_results["prefill"]["compute_time"] + total_results["prefill"]["collectives_time"])
+        total_results["prefill"]["compute_time_ratio"] = total_results["prefill"]["compute_time"] / (total_results["prefill"]["compute_time"] + total_results["prefill"]["collectives_time"])
+        
         # lm_head
         name = "lm_head"
         args = {"batchsize": batchsize, "a_byte": a_byte, "w_byte": w_byte}
