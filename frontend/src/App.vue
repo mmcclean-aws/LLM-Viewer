@@ -14,7 +14,7 @@ const model_id = ref("meta-llama/Llama-2-7b-hf");
 const hardware = ref("trainium2");
 const global_update_trigger = ref(1);
 const total_results = ref({});
-const ip_port = ref("127.0.0.1");
+const ip_port = ref("127.0.0.1:8000");
 
 provide("model_id", model_id);
 provide("hardware", hardware);

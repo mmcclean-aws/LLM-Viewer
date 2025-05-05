@@ -19,7 +19,6 @@
         <span> | </span>
         <span>Server: </span>
         <select v-model="ip_port">
-            <option value="api.llm-viewer.com">api.llm-viewer.com</option>
             <option value="127.0.0.1:8000">127.0.0.1</option>
         </select>
     </div>
@@ -85,6 +84,13 @@ function update_avaliable() {
         console.log(response);
         avaliable_hardwares.value = response.data.avaliable_hardwares
         avaliable_model_ids.value = response.data.avaliable_model_ids
+
+        if (
+            !select_hardware.value ||
+            !avaliable_hardwares.value.includes(select_hardware.value)
+        ) {
+            select_hardware.value = avaliable_hardwares.value[0] || '';
+        }
     })
         .catch(function (error) {
             console.log("error in get_avaliable");
